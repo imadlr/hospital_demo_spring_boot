@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class PatientController {
     private PatientRepository patientRepository;
 
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/index";
+    }
+
     @GetMapping("/index")
     public String index(Model model,
                         @RequestParam(name = "page", defaultValue = "0") int page,
