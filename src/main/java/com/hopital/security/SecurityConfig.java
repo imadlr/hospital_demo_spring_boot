@@ -1,5 +1,8 @@
 package com.hopital.security;
 
+import com.hopital.security.repositories.AppRoleRepository;
+import com.hopital.security.services.AccountService;
+import com.hopital.security.services.UserDetailsServiceImpl;
 import com.mysql.cj.MysqlType;
 import com.mysql.cj.jdbc.MysqlDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,8 @@ public class SecurityConfig {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -36,6 +41,9 @@ public class SecurityConfig {
     }
 
     // si on ne veut pas utiliser un password encoder ov va insérer avant le password {noop}
+
+    // La startégie InMemoryUserDetailsManagement
+
     //@Bean
     public InMemoryUserDetailsManager inMemoryUserDetailsManager() {
         InMemoryUserDetailsManager inMemoryUserDetailsManager = new InMemoryUserDetailsManager(
@@ -44,6 +52,8 @@ public class SecurityConfig {
                 User.withUsername("admin").password(passwordEncoder.encode("123")).roles("user", "admin").build());
         return inMemoryUserDetailsManager;
     }
+
+    // La startégie JdbcUserDetailsManager
 
     //@Bean
     DataSource dataSource() {
@@ -54,7 +64,7 @@ public class SecurityConfig {
                 .build();
     }
 
-    @Bean
+    //@Bean
     public JdbcUserDetailsManager jdbcUserDetailsManager(DataSource dataSource) {
         JdbcUserDetailsManager jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
         return jdbcUserDetailsManager;
@@ -69,13 +79,14 @@ public class SecurityConfig {
                         .permitAll()
                         .defaultSuccessUrl("/"))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/webjars/**","/h2-console/**").permitAll()
+                        .requestMatchers("/webjars/**", "/h2-console/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("admin")
                         .requestMatchers("/user/**").hasRole("user")
                         .anyRequest().authenticated())
                 //.rememberMe(Customizer.withDefaults())
                 .exceptionHandling(exHandl -> exHandl
-                        .accessDeniedPage("/notAuthorized"));
+                        .accessDeniedPage("/notAuthorized"))
+                .userDetailsService(userDetailsService);
         return httpSecurity.build();
     }
 
@@ -88,6 +99,21 @@ public class SecurityConfig {
             jdbcUserDetailsManager.createUser(
                     User.withUsername("admin").password(passwordEncoder.encode("123")).roles("user", "admin").build()
             );
+        };
+    }
+
+    //@Bean
+    CommandLineRunner commandLineRunnerUserDetailsService(AccountService accountService) {
+        return args -> {
+            accountService.addRole("admin");
+            accountService.addRole("user");
+            //
+            accountService.addUser("user", "123", "user@gmail.com", "123");
+            accountService.addUser("admin", "123", "admin@gmail.com", "123");
+            //
+            accountService.addRoleToUser("user", "user");
+            accountService.addRoleToUser("admin", "user");
+            accountService.addRoleToUser("admin", "admin");
         };
     }
 
